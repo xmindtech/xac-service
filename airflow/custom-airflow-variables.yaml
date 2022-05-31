@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: airflow
+  name: airflow-variables
+data:
+  XAC_EVIDENCE_S3_BUCKET: "xac-evidence-test"
+  XAC_RESULTS_S3_BUCKET: "xac-evidence-test"

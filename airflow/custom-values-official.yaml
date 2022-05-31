@@ -1,0 +1,118 @@
+# set if using ArgoCD
+#createUserJob.useHelmHooks: false
+#migrateDatabaseJob.useHelmHooks: false
+
+# Airflow executor
+# Options: LocalExecutor, CeleryExecutor, KubernetesExecutor, CeleryKubernetesExecutor
+executor: "KubernetesExecutor"
+
+###############################################################################
+extraEnvFrom: |
+  - configMapRef:
+      name: 'airflow-variables'
+
+###############################################################################
+#data: FIXME
+  # If secret names are provided, use those secrets
+  # metadataSecretName: xac-airflow-metadata
+
+###############################################################################
+# Flask secret key for Airflow Webserver: `[webserver] secret_key` in airflow.cfg
+webserverSecretKeySecretName: xac-webserver-secret
+fernetKeySecretName: xac-fernet-key
+###############################################################################
+# Airflow worker settings
+workers:
+  persistence:
+    # Enable persistent volumes
+    enabled: false
+    # Volume size for worker StatefulSet
+    size: 100Gi
+    # If using a custom storageClass, pass name ref to all statefulSets here
+    storageClassName: efs-sc-static
+  
+  # Mount additional volumes into worker.
+  extraVolumes:
+    - name: airflow-worker
+      persistentVolumeClaim:
+        claimName: efs-claim-airflow
+  extraVolumeMounts:
+    - name: airflow-worker
+      mountPath: /opt/airflow
+
+###############################################################################
+# Airflow scheduler settings
+scheduler:
+  # Mount additional volumes into scheduler.
+  extraVolumes:
+    - name: airflow-scheduler
+      persistentVolumeClaim:
+        claimName: efs-claim-airflow
+  extraVolumeMounts:
+    - name: airflow-scheduler
+      mountPath: /opt/airflow
+
+###############################################################################
+# Airflow webserver settings
+webserver:
+  # Mount additional volumes into webserver.
+  extraVolumes:
+    - name: airflow-web
+      persistentVolumeClaim:
+        claimName: efs-claim-airflow
+  extraVolumeMounts:
+    - name: airflow-web
+      mountPath: /opt/airflow
+
+###############################################################################
+# PgBouncer settings
+pgbouncer:
+  # Enable PgBouncer
+  enabled: true
+
+###############################################################################
+# This runs as a CronJob to cleanup old pods.
+cleanup:
+  enabled: true
+  # Run every 15 minutes
+  schedule: "*/15 * * * *"
+
+###############################################################################
+# Config settings to go into the mounted airflow.cfg
+config:
+  core:
+    dags_folder: '{{ include "airflow_dags" . }}'
+    # This is ignored when used with the official Docker image
+    load_examples: 'True'
+  webserver:
+    dag_default_view: 'graph'
+  scheduler:
+    dag_dir_list_interval: 30
+
+###############################################################################
+dags:
+  persistence:
+    # Enable persistent volume for storing dags
+    enabled: false
+    # Volume size for dags
+    size: 10Gi
+    # If using a custom storageClass, pass name here
+    storageClassName: efs-sc-static 
+    # access mode of the persistent volume
+    accessMode: ReadWriteMany
+    ## the name of an existing PVC to use
+    existingClaim: efs-claim-airflow
+  gitSync:
+    enabled: false
+
+###############################################################################
+logs:
+  persistence:
+    # Enable persistent volume for storing logs
+    enabled: true 
+    # Volume size for logs
+    size: 100Gi
+    # If using a custom storageClass, pass name here
+    storageClassName: efs-sc-static
+    ## the name of an existing PVC to use
+    existingClaim: efs-claim-logs

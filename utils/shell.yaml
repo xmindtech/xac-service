@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shell
+  namespace: airflow
+spec:
+  securityContext:
+    runAsUser: 0
+    runAsGroup: 0
+    fsGroup: 0
+  containers:
+  - name: airflow-shell
+    image: busybox
+    command: ["sh","-c","sleep 10m" ]
+    volumeMounts:
+    - name: airflow-data
+      mountPath: /opt/airflow
+    - name: dfir-analysis
+      mountPath: /case-analysis/
+    - name: dfir-evidence
+      mountPath: /case-evidence/
+    securityContext:
+      allowPrivilegeEscalation: true
+      privileged: true
+      
+  volumes:
+  - name: airflow-data
+    persistentVolumeClaim:
+      claimName: efs-claim-airflow
+  - name: dfir-analysis
+    persistentVolumeClaim:
+      claimName: efs-claim-analysis
+  - name: dfir-evidence
+    persistentVolumeClaim:
+      claimName: efs-claim-evidence
+  hostNetwork: true
+  dnsPolicy: Default
+
+
